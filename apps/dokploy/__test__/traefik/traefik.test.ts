@@ -3,6 +3,7 @@ import { createRouterConfig } from "@dokploy/server";
 import { expect, test } from "vitest";
 
 const baseApp: ApplicationNested = {
+	staticSiteOnly: false,
 	railpackVersion: "0.15.4",
 	rollbackActive: false,
 	applicationId: "",
