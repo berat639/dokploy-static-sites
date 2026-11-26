@@ -4,12 +4,12 @@ export const STATIC_SITE_LIMITS = { compressed: 20 * 1024 * 1024, expanded: 60 *
 const reads = new Set([
     "user.session", "settings.isCloud", "user.get", "user.one", "user.getPermissions", "user.haveRootAccess", "user.listSessions", "user.checkUserOrganizations",
     "project.all", "project.one", "environment.one", "environment.byProjectId",
-    "application.one", "application.readLogs", "domain.byApplicationId", "domain.one",
+    "application.staticGithubConnections", "application.one", "application.readLogs", "domain.byApplicationId", "domain.one",
     "deployment.all", "deployment.readLogs", "settings.getDokployVersion", "settings.getReleaseTag", "settings.isUserSubscribed",
     "organization.all", "organization.one", "organization.list", "organization.getCurrentOrganization", "organization.active", "tag.all",
 ]);
 const mutations = new Set([
-    "application.create", "application.dropDeployment", "application.deploy", "application.redeploy", "application.start", "application.stop",
+    "application.githubDeployment", "application.create", "application.dropDeployment", "application.deploy", "application.redeploy", "application.start", "application.stop",
     "domain.create", "domain.update", "domain.delete", "domain.toggleEnable", "user.revokeSession",
 ]);
 export const staticSiteRequestAllowed = (path: string, type: string) => type === "query" ? reads.has(path) : type === "mutation" && mutations.has(path);

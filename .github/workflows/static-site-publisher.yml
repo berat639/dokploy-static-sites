@@ -2,7 +2,7 @@ name: Static site publisher verification
 on:
   workflow_dispatch:
   push:
-    branches: [static-site-publisher]
+    branches: [static-site-publisher, static-site-github]
 permissions:
   contents: read
 jobs:
@@ -19,7 +19,7 @@ jobs:
           node-version: 24.4.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: node --test tests/static-sites/policy.test.ts
+      - run: node --test tests/static-sites/policy.test.ts tests/static-sites/github.test.ts
       - run: node --test tests/static-sites/run-scope-tests.mjs
       - run: pnpm --filter=dokploy exec vitest run --config __test__/vitest.config.ts __test__/permissions __test__/wss/authorize.test.ts
       - run: pnpm --filter=@dokploy/server build

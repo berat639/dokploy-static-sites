@@ -35,3 +35,12 @@ The 10 policy tests and 9 scope tests ran locally and passed. The scope harness 
 ## Boundaries
 
 This prevents running server applications under the restricted account. It cannot automatically determine that every HTML/JavaScript site is a business brochure: browser-only applications and external API calls are still technically static files. No content-based approval system is added. The Dockerfile and ZIP payload are never treated as a source project for npm/pip or shell execution. Other existing users and applications remain unrestricted unless explicitly opted into this mode.
+
+
+## GitHub static output imports
+
+The restricted application screen accepts a GitHub repository URL, branch and ready-made output folder. The `application.githubDeployment` endpoint downloads the repository from GitHub with a bounded stream, validates only the selected folder, and publishes it with the existing immutable static builder. It stores repository metadata for subsequent manual updates. Neither npm scripts nor repository Dockerfiles are executed. A compiled project must commit its static output (such as `dist` or `out`) first. This does not add webhook auto-deployment.
+
+Public repositories need no credentials. Private repositories use an existing GitHub App connection belonging to the actor in the current organization. An administrator can also publish one private repository into an assigned static application, after which a member can update that same repository without gaining access to other installation repositories. Provider responses contain only identifiers and names. General Git provider, runtime and service-management endpoints remain blocked.
+
+Static hosting prevents backend and mobile runtime deployment. It cannot classify the business purpose of an HTML/JavaScript frontend; a static page may still contain a dashboard or make browser-side API requests.

@@ -335,7 +335,7 @@ export const AddUserPermissions = ({ userId, role }: Props) => {
 						)}
                         {!isCustomRole && <FormField control={form.control} name="staticSiteOnly" render={({ field }) => (
                             <FormItem className="md:col-span-2 flex flex-row items-center justify-between rounded-lg border p-3">
-                                <div><FormLabel>Yalnızca statik site yayınlama</FormLabel><FormDescription>Seçilen ortamlarda hazır ZIP yayınlar ve alan adı bağlar. Genel servis, veritabanı, Compose, terminal ve çalıştırma ayarları kapatılır.</FormDescription></div>
+                                <div><FormLabel>Yalnızca statik site yayınlama</FormLabel><FormDescription>Seçilen ortamlarda GitHub’dan veya ZIP’ten hazır statik çıktı yayınlar ve alan adı bağlar. Genel servis, veritabanı, Compose, terminal ve çalıştırma ayarları kapatılır.</FormDescription></div>
                                 <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                             </FormItem>
                         )} />}

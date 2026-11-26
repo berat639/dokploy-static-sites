@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ export function StaticSiteEnvironment({ environmentId, projectId }: {
     const [name, setName] = useState("");
     return <div className="space-y-6 p-6">
   <h1 className="text-2xl font-semibold">Tanıtım Siteleri</h1>
-  <p className="text-muted-foreground">Hazır statik site dosyalarını ZIP olarak yayınlayın, kendi alan adınızı bağlayın.</p>
+  <p className="text-muted-foreground">GitHub deponuzdaki hazır statik çıktı klasörünü yayınlayın, kendi alan adınızı bağlayın.</p>
   <form className="flex gap-3 max-w-lg" onSubmit={async (e) => { e.preventDefault(); try {
         await create.mutateAsync({ name: name.trim(), environmentId });
         setName("");
@@ -37,6 +37,20 @@ export function StaticSiteApplication({ applicationId }: {
     const { data: domains } = api.domain.byApplicationId.useQuery({ applicationId });
     const { data: deployments } = api.deployment.all.useQuery({ applicationId }, { refetchInterval: 5000 });
     const upload = api.application.dropDeployment.useMutation();
+    const githubDeploy = api.application.githubDeployment.useMutation();
+    const connections = api.application.staticGithubConnections.useQuery({ applicationId });
+    const [repositoryUrl, setRepositoryUrl] = useState("");
+    const [branch, setBranch] = useState("main");
+    const [directory, setDirectory] = useState(".");
+    const [githubId, setGithubId] = useState("");
+    const [sourceLoaded, setSourceLoaded] = useState(false);
+    useEffect(() => {
+        if (app && !sourceLoaded) {
+            if (app.owner && app.repository) setRepositoryUrl(`https://github.com/${app.owner}/${app.repository}`);
+            setBranch(app.branch || "main"); setDirectory(app.buildPath || "."); setGithubId(app.githubId || "");
+            setSourceLoaded(true);
+        }
+    }, [app, sourceLoaded]);
     const createDomain = api.domain.create.useMutation();
     const redeploy = api.application.redeploy.useMutation();
     const start = api.application.start.useMutation();
@@ -56,6 +70,26 @@ export function StaticSiteApplication({ applicationId }: {
   <Link className="text-sm underline" href={`/dashboard/project/${app?.environment.projectId}/environment/${app?.environmentId}`}>Sitelerime dön</Link>
   <h1 className="text-2xl font-semibold">{app?.name}</h1>
   <p className="text-muted-foreground">Statik site · {app?.applicationStatus} · Sunucu kodu ve paket kurulum komutları çalıştırılmaz.</p>
+  <section className="rounded-xl border p-5 space-y-4">
+   <h2 className="font-semibold">GitHub’dan statik site yayınla</h2>
+   <p className="text-sm text-muted-foreground">Depo, dal ve hazır çıktı klasörünü seçin. Klasörde index.html olmalı. Her yayınlamada GitHub’daki güncel dosyalar alınır. Paket kurulumu, sunucu kodu ve proje komutları çalıştırılmaz. Kaynak proje kullanıyorsanız önce statik çıktıyı deponuza ekleyin.</p>
+   <form className="space-y-3" onSubmit={e => { e.preventDefault(); void act(async () => {
+       await githubDeploy.mutateAsync({ applicationId, repositoryUrl: repositoryUrl.trim(), branch: branch.trim(), directory: directory.trim(), githubId: githubId || undefined });
+       toast.success("GitHub dosyaları doğrulandı ve statik yayın sırasına alındı");
+   }); }}>
+    <label className="block text-sm">GitHub deposu<Input aria-label="GitHub deposu" placeholder="https://github.com/kullanici/depo" required value={repositoryUrl} onChange={e => setRepositoryUrl(e.target.value)} /></label>
+    <div className="grid gap-3 sm:grid-cols-2">
+     <label className="block text-sm">Dal<Input aria-label="Dal" required value={branch} onChange={e => setBranch(e.target.value)} /></label>
+     <label className="block text-sm">Statik çıktı klasörü<Input aria-label="Statik çıktı klasörü" placeholder="web veya dist" required value={directory} onChange={e => setDirectory(e.target.value)} /></label>
+    </div>
+    <label className="block text-sm">GitHub bağlantısı<select aria-label="GitHub bağlantısı" className="block w-full rounded-md border bg-background p-2" value={githubId} onChange={e => setGithubId(e.target.value)}>
+     <option value="">Herkese açık depo</option>
+     {connections.data?.map(connection => <option key={connection.githubId} value={connection.githubId}>{connection.name}</option>)}
+    </select></label>
+    <p className="text-xs text-muted-foreground">Özel depolar için size ait bağlantı veya yöneticinin bu siteye bağladığı depo kullanılabilir.</p>
+    <Button disabled={githubDeploy.isPending || !repositoryUrl.trim()}>{githubDeploy.isPending ? "GitHub dosyaları doğrulanıyor…" : "GitHub’dan yayınla / güncelle"}</Button>
+   </form>
+  </section>
   <section className="rounded-xl border p-5 space-y-4"><h2 className="font-semibold">Site dosyalarını yayınla</h2><p className="text-sm text-muted-foreground">Hazırlanmış çıktı klasörünü ZIP olarak yükleyin. Kök dizinde index.html bulunmalı. En fazla 20 MB; PHP, Dockerfile ve kaynak proje dosyaları kabul edilmez.</p>
    <Input type="file" accept=".zip" aria-label="Statik site ZIP dosyası" onChange={e => setZip(e.target.files?.[0] ?? null)}/>
    <div className="flex gap-3"><Button disabled={!zip || upload.isPending} onClick={() => act(async () => { if (!zip || zip.size > 20 * 1024 * 1024)

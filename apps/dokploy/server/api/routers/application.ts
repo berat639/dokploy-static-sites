@@ -1,3 +1,7 @@
+import { findGithubById } from "@dokploy/server/services/github";
+import { authGithub, getGithubToken } from "@dokploy/server/utils/providers/github";
+import { downloadStaticGithubArchive } from "@dokploy/server/utils/static-sites/github-archive";
+import { parseStaticGithubInput, staticGithubProviderAllowed } from "@dokploy/server/utils/static-sites/github-policy";
 import {
 	clearOldDeployments,
 	createApplication,
@@ -81,6 +85,62 @@ import {
 import { cancelDeployment, deploy } from "@/server/utils/deploy";
 
 export const applicationRouter = createTRPCRouter({
+    staticGithubConnections: protectedProcedure
+        .input(apiFindOneApplication)
+        .query(async ({ input, ctx }) => {
+            await checkServiceAccess(ctx, input.applicationId, "read");
+            const app = await findApplicationById(input.applicationId);
+            if (!app.staticSiteOnly || app.environment.project.organizationId !== ctx.session.activeOrganizationId)
+                throw new TRPCError({ code: "FORBIDDEN" });
+            const member = await findMemberByUserId(ctx.user.id, ctx.session.activeOrganizationId);
+            const providers = await db.query.gitProvider.findMany({
+                where: (p, { and, eq }) => and(eq(p.organizationId, ctx.session.activeOrganizationId), eq(p.providerType, "github")),
+                columns: { name: true, userId: true },
+                with: { github: { columns: { githubId: true, githubUrl: true } } },
+            });
+            return providers.filter(p => p.github && (!p.github.githubUrl || p.github.githubUrl === "https://github.com") &&
+                (member.role === "owner" || member.role === "admin" || p.userId === ctx.user.id || p.github.githubId === app.githubId))
+                .map(p => ({ githubId: p.github!.githubId, name: p.name }));
+        }),
+    githubDeployment: protectedProcedure
+        .input(z.object({
+            applicationId: z.string().min(1), repositoryUrl: z.string().max(300),
+            branch: z.string().min(1).max(200), directory: z.string().max(250).default("."),
+            githubId: z.string().max(200).optional(),
+        }))
+        .mutation(async ({ input, ctx }) => {
+            await checkServicePermissionAndAccess(ctx, input.applicationId, { deployment: ["create"] });
+            const app = await findApplicationById(input.applicationId);
+            if (!app.staticSiteOnly || app.environment.project.organizationId !== ctx.session.activeOrganizationId)
+                throw new TRPCError({ code: "FORBIDDEN", message: "Bu işlem yalnızca yetkili statik sitelerde kullanılabilir" });
+            const source = parseStaticGithubInput(input.repositoryUrl, input.branch, input.directory);
+            let token: string | undefined;
+            if (input.githubId) {
+                const provider = await findGithubById(input.githubId);
+                const member = await findMemberByUserId(ctx.user.id, ctx.session.activeOrganizationId);
+                if (!provider.gitProvider || (provider.githubUrl && provider.githubUrl !== "https://github.com") || !staticGithubProviderAllowed(
+                    { id: ctx.user.id, role: member.role, organizationId: ctx.session.activeOrganizationId }, provider.gitProvider, app,
+                    { githubId: input.githubId, owner: source.owner, repository: source.repository },
+                )) throw new TRPCError({ code: "FORBIDDEN", message: "Bu GitHub bağlantısı veya depo için yetkiniz yok" });
+                token = await getGithubToken(authGithub(provider));
+            }
+            const zip = await downloadStaticGithubArchive(source.owner, source.repository, source.branch, source.directory, token);
+            await unzipDrop(zip, app);
+            // Store the link, but retain the fixed drop/static builder: no repository scripts ever run.
+            await updateApplication(app.applicationId, {
+                owner: source.owner, repository: source.repository, branch: source.branch,
+                buildPath: source.directory || ".", githubId: input.githubId || null,
+            });
+            const jobData: DeploymentJob = {
+                applicationId: app.applicationId, titleLog: `GitHub: ${source.owner}/${source.repository} (${source.branch})`,
+                descriptionLog: `Statik çıktı: ${source.directory || "."}`, type: "deploy", applicationType: "application",
+                server: false,
+            };
+            await myQueue.add("deployments", jobData, { removeOnComplete: true, removeOnFail: true });
+            await audit(ctx, { action: "deploy", resourceType: "application", resourceId: app.applicationId, resourceName: app.appName });
+            return true;
+        }),
+
 	create: protectedProcedure
 		.input(apiCreateApplication)
 		.mutation(async ({ input, ctx }) => {
@@ -936,6 +996,7 @@ export const applicationRouter = createTRPCRouter({
 			await updateApplication(applicationId, {
 				sourceType: "drop",
 				dropBuildPath: dropBuildPath || "",
+                ...(app.staticSiteOnly ? { owner: null, repository: null, branch: null, githubId: null, buildPath: "/" } : {}),
 			});
 
 			await unzipDrop(zipFile, app);
