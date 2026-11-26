@@ -11,6 +11,7 @@ const reads = new Set([
 const mutations = new Set([
     "application.create", "application.dropDeployment", "application.deploy", "application.redeploy", "application.start", "application.stop",
     "domain.create", "domain.update", "domain.delete", "domain.toggleEnable", "user.revokeSession",
+    "user.createApiKey", "user.deleteApiKey",
 ]);
 export const staticSiteRequestAllowed = (path: string, type: string) => type === "query" ? reads.has(path) : type === "mutation" && mutations.has(path);
 export const staticSitePermissionAllowed = (resource: string, action: string) => ({

@@ -11,6 +11,7 @@ import { appRouter } from "@/server/api/root";
 import { api } from "@/utils/api";
 
 const Page = () => {
+	const { data: account } = api.user.get.useQuery();
 	const { data: permissions } = api.user.getPermissions.useQuery();
 	const { data: isCloud } = api.settings.isCloud.useQuery();
 
@@ -19,7 +20,7 @@ const Page = () => {
 			<div className="h-full rounded-xl max-w-5xl mx-auto flex flex-col gap-4">
 				<ProfileForm />
 				{isCloud && <LinkingAccount />}
-				{permissions?.api.read && <ShowApiKeys />}
+				{(permissions?.api.read || account?.staticSiteOnly) && <ShowApiKeys />}
 			</div>
 		</div>
 	);

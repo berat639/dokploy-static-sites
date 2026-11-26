@@ -25,6 +25,11 @@ export async function enforceStaticSiteRequest(ctx: PermissionCtx, path: string,
             deny();
         return app;
     }
+    if (path === "user.createApiKey") {
+        const metadata = input.metadata as Record<string, unknown> | undefined;
+        if (!metadata || metadata.organizationId !== account.staticSiteOrganizationId)
+            deny();
+    }
     if (path === "application.create") {
         if (typeof input.environmentId !== "string" || !member.accessedEnvironments.includes(input.environmentId) || input.serverId)
             deny();

@@ -2,7 +2,7 @@ name: Static site publisher verification
 on:
   workflow_dispatch:
   push:
-    branches: [static-site-publisher]
+    branches: [static-site-publisher, static-site-api-keys]
 permissions:
   contents: read
 jobs:
