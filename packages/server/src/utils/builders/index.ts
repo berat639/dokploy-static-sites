@@ -142,7 +142,7 @@ export const mechanizeDockerContainer = async (
 				HealthCheck,
 				Image: image,
 				Env: application.staticSiteOnly ? [] : envVariables,
-				...(application.staticSiteOnly ? { User: "101:101", ReadOnly: true, CapabilityDrop: ["ALL"], Mounts: [{ Type: "tmpfs" as const, Target: "/tmp", TmpfsOptions: { SizeBytes: 33554432, Mode: 0o1777 } }] } : {}),
+				...(application.staticSiteOnly ? { User: "101:101", ReadOnly: true, CapabilityDrop: ["ALL"], Mounts: [{ Type: "tmpfs" as const, Source: "", Target: "/tmp", TmpfsOptions: { SizeBytes: 33554432, Mode: 0o1777 } }] } : {}),
 				...(!application.staticSiteOnly ? { Mounts: [...volumesMount, ...bindsMount, ...filesMount] } : {}),
 				...(StopGracePeriod !== null &&
 					StopGracePeriod !== undefined && { StopGracePeriod }),

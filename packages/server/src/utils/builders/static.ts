@@ -61,7 +61,7 @@ export const getStaticCommand = (application: ApplicationNested) => {
 
 	command += getDockerCommand({
 		...application,
-		...(application.staticSiteOnly ? { environment: { ...application.environment, env: null, project: { ...application.environment.project, env: null } } } : {}),
+		...(application.staticSiteOnly ? { environment: { ...application.environment, env: "", project: { ...application.environment.project, env: "" } } } : {}),
 		buildType: "dockerfile",
 		dockerfile: "Dockerfile",
 	});
