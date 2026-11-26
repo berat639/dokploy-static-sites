@@ -5,6 +5,7 @@ import type { Application } from "@dokploy/server/services/application";
 import { findServerById } from "@dokploy/server/services/server";
 import { readValidDirectory } from "@dokploy/server/wss/utils";
 import AdmZip from "adm-zip";
+import { validateStaticZip } from "../static-sites/archive";
 import { Client, type SFTPWrapper } from "ssh2";
 import {
 	recreateDirectory,
@@ -17,6 +18,7 @@ export const unzipDrop = async (zipFile: File, application: Application) => {
 
 	try {
 		const { appName } = application;
+		if (application.staticSiteOnly) await validateStaticZip(zipFile);
 		// Use buildServerId if set, otherwise fall back to serverId
 		// This ensures the code is extracted to the server where the build will run
 		const targetServerId = application.buildServerId || application.serverId;

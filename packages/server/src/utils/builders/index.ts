@@ -19,6 +19,7 @@ import { getNixpacksCommand } from "./nixpacks";
 import { getPaketoCommand } from "./paketo";
 import { getRailpackCommand } from "./railpack";
 import { getStaticCommand } from "./static";
+import { assertStaticSiteConfiguration } from "../static-sites/policy";
 
 // NIXPACKS codeDirectory = where is the path of the code directory
 // HEROKU codeDirectory = where is the path of the code directory
@@ -40,6 +41,7 @@ export type ApplicationNested = InferResultType<
 >;
 
 export const getBuildCommand = async (rawApplication: ApplicationNested) => {
+	assertStaticSiteConfiguration(rawApplication);
 	const application = await withResolvedVaultRefs(rawApplication);
 	let command = "";
 
@@ -81,6 +83,7 @@ export const getBuildCommand = async (rawApplication: ApplicationNested) => {
 export const mechanizeDockerContainer = async (
 	rawApplication: ApplicationNested,
 ) => {
+	assertStaticSiteConfiguration(rawApplication);
 	const application = await withResolvedVaultRefs(rawApplication);
 	const {
 		appName,
@@ -138,8 +141,9 @@ export const mechanizeDockerContainer = async (
 			ContainerSpec: {
 				HealthCheck,
 				Image: image,
-				Env: envVariables,
-				Mounts: [...volumesMount, ...bindsMount, ...filesMount],
+				Env: application.staticSiteOnly ? [] : envVariables,
+				...(application.staticSiteOnly ? { User: "101:101", ReadOnly: true, CapabilityDrop: ["ALL"], Mounts: [{ Type: "tmpfs" as const, Target: "/tmp", TmpfsOptions: { SizeBytes: 33554432, Mode: 0o1777 } }] } : {}),
+				...(!application.staticSiteOnly ? { Mounts: [...volumesMount, ...bindsMount, ...filesMount] } : {}),
 				...(StopGracePeriod !== null &&
 					StopGracePeriod !== undefined && { StopGracePeriod }),
 				...(command && {

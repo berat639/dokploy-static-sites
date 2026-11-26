@@ -137,6 +137,7 @@ export const member = pgTable("member", {
 	// Permissions
 	canCreateProjects: boolean("canCreateProjects").notNull().default(false),
 	canAccessToSSHKeys: boolean("canAccessToSSHKeys").notNull().default(false),
+	staticSiteOnly: boolean("staticSiteOnly").notNull().default(false),
 	canCreateServices: boolean("canCreateServices").notNull().default(false),
 	canDeleteProjects: boolean("canDeleteProjects").notNull().default(false),
 	canDeleteServices: boolean("canDeleteServices").notNull().default(false),

@@ -12,6 +12,8 @@ import {
 	statements,
 } from "../lib/access-control";
 
+import { staticSitePermissionAllowed } from "../utils/static-sites/policy";
+
 type Statements = typeof statements;
 type Resource = keyof Statements;
 type Action<R extends Resource> = Statements[R][number];
@@ -80,6 +82,11 @@ export const checkPermission = async (
 	const { id: userId } = ctx.user;
 	const { activeOrganizationId: organizationId } = ctx.session;
 	const memberRecord = await findMemberByUserId(userId, organizationId);
+
+	if (memberRecord.staticSiteOnly) {
+		if (memberRecord.role === "member" && Object.entries(permissions).every(([resource, actions]) => (actions as string[]).every(action => staticSitePermissionAllowed(resource, action)))) return;
+		throw new TRPCError({ code: "FORBIDDEN", message: "Static site publishers cannot use this permission" });
+	}
 
 	const isPrivilegedStaticRole =
 		memberRecord.role === "owner" || memberRecord.role === "admin";
@@ -194,6 +201,10 @@ export const resolvePermissions = async (
 	for (const [resource, actions] of Object.entries(statements)) {
 		const resourcePerms = {} as Record<string, boolean>;
 		for (const action of actions) {
+			if (memberRecord.staticSiteOnly) {
+				resourcePerms[action] = memberRecord.role === "member" && staticSitePermissionAllowed(resource, action);
+				continue;
+			}
 			if (isPrivilegedRole && enterpriseOnlyResources.has(resource)) {
 				resourcePerms[action] = true;
 				continue;

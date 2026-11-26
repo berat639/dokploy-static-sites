@@ -51,10 +51,12 @@ import {
 	updatePreviewDeployment,
 } from "./preview-deployment";
 import { validUniqueServerAppName } from "./project";
+import { assertStaticSiteConfiguration, staticSiteDefaults } from "../utils/static-sites/policy";
 export type Application = typeof applications.$inferSelect;
 
 export const createApplication = async (
 	input: z.infer<typeof apiCreateApplication>,
+	staticSiteOnly = false,
 ) => {
 	const appName = buildAppName("app", input.appName);
 
@@ -71,6 +73,7 @@ export const createApplication = async (
 			.insert(applications)
 			.values({
 				...input,
+				...(staticSiteOnly ? staticSiteDefaults : {}),
 				appName,
 			})
 			.returning()
@@ -148,6 +151,11 @@ export const updateApplication = async (
 	applicationId: string,
 	applicationData: Partial<Application>,
 ) => {
+	const current = await findApplicationById(applicationId);
+	if (current.staticSiteOnly) {
+		if (applicationData.staticSiteOnly === false) throw new TRPCError({ code: "FORBIDDEN", message: "Static-only restriction cannot be removed" });
+		assertStaticSiteConfiguration({ ...current, ...applicationData });
+	}
 	const { appName, ...rest } = applicationData;
 	const application = await db
 		.update(applications)

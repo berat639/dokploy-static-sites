@@ -1,3 +1,4 @@
+import { STATIC_SITE_IMAGE } from "../static-sites/policy";
 import { getDockerCommand } from "@dokploy/server/utils/builders/docker-file";
 import { getCreateFileCommand } from "../docker/utils";
 import { getBuildAppDirectory } from "../filesystem/directory";
@@ -50,7 +51,7 @@ export const getStaticCommand = (application: ApplicationNested) => {
 		buildAppDirectory,
 		"Dockerfile",
 		[
-			"FROM nginx:alpine",
+			application.staticSiteOnly ? `FROM ${STATIC_SITE_IMAGE}` : "FROM nginx:alpine",
 			"WORKDIR /usr/share/nginx/html/",
 			isStaticSpa ? "COPY nginx.conf /etc/nginx/nginx.conf" : "",
 			`COPY ${publishDirectory || "."} .`,
@@ -60,6 +61,7 @@ export const getStaticCommand = (application: ApplicationNested) => {
 
 	command += getDockerCommand({
 		...application,
+		...(application.staticSiteOnly ? { environment: { ...application.environment, env: null, project: { ...application.environment.project, env: null } } } : {}),
 		buildType: "dockerfile",
 		dockerfile: "Dockerfile",
 	});

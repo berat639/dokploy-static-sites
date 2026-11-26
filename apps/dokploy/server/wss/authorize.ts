@@ -1,3 +1,6 @@
+import { db } from "@dokploy/server/db";
+import { user as users } from "@dokploy/server/db/schema";
+import { eq } from "drizzle-orm";
 import { getAccessibleServerIds } from "@dokploy/server";
 import {
 	checkServiceAccess,
@@ -29,6 +32,8 @@ export const canAccessDockerOverWss = async (
 	if (!user || !session?.activeOrganizationId) return false;
 
 	const ctx = buildCtx(user, session.activeOrganizationId);
+	const account = await db.query.user.findFirst({ where: eq(users.id, user.id), columns: { staticSiteOnly: true } });
+	if (account?.staticSiteOnly) return false;
 
 	// When the container belongs to a specific Dokploy service (opened from a
 	// service page, so serviceId is present), access to that service is the
@@ -71,6 +76,8 @@ export const canAccessTerminalOverWss = async (
 ): Promise<boolean> => {
 	if (!user || !session?.activeOrganizationId) return false;
 
+	const account = await db.query.user.findFirst({ where: eq(users.id, user.id), columns: { staticSiteOnly: true } });
+	if (account?.staticSiteOnly) return false;
 	if (serverId && serverId !== "local") {
 		const accessible = await getAccessibleServerIds({
 			userId: user.id,

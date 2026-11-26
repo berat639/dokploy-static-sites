@@ -1,3 +1,6 @@
+import { db } from "@dokploy/server/db";
+import { user as users } from "@dokploy/server/db/schema";
+import { eq } from "drizzle-orm";
 import { spawn } from "node:child_process";
 import type http from "node:http";
 import { findServerById, IS_CLOUD, validateRequest } from "@dokploy/server";
@@ -51,6 +54,8 @@ export const setupDeploymentLogsWebSocketServer = (
 			return;
 		}
 
+		const account = await db.query.user.findFirst({ where: eq(users.id, user.id), columns: { staticSiteOnly: true } });
+		if (account?.staticSiteOnly) { ws.close(4003, "Use the service-scoped deployment log endpoint"); return; }
 		let tailProcess: ReturnType<typeof spawn> | null = null;
 		let sshClient: Client | null = null;
 

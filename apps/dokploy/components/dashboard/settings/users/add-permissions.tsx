@@ -174,6 +174,7 @@ const addPermissions = z.object({
 	accessedGitProviders: z.array(z.string()).optional(),
 	accessedServers: z.array(z.string()).optional(),
 	canCreateProjects: z.boolean().optional().default(false),
+	staticSiteOnly: z.boolean().optional().default(false),
 	canCreateServices: z.boolean().optional().default(false),
 	canDeleteProjects: z.boolean().optional().default(false),
 	canDeleteServices: z.boolean().optional().default(false),
@@ -234,6 +235,7 @@ export const AddUserPermissions = ({ userId, role }: Props) => {
 			accessedServers: [],
 			canDeleteEnvironments: false,
 			canCreateProjects: false,
+			staticSiteOnly: false,
 			canCreateServices: false,
 			canDeleteProjects: false,
 			canDeleteServices: false,
@@ -256,7 +258,8 @@ export const AddUserPermissions = ({ userId, role }: Props) => {
 				accessedGitProviders: data.accessedGitProviders || [],
 				accessedServers: data.accessedServers || [],
 				canCreateProjects: data.canCreateProjects,
-				canCreateServices: data.canCreateServices,
+				staticSiteOnly: data.staticSiteOnly,
+			canCreateServices: data.canCreateServices,
 				canDeleteProjects: data.canDeleteProjects,
 				canDeleteServices: data.canDeleteServices,
 				canDeleteEnvironments: data.canDeleteEnvironments || false,
@@ -273,6 +276,7 @@ export const AddUserPermissions = ({ userId, role }: Props) => {
 	const onSubmit = async (data: AddPermissions) => {
 		await mutateAsync({
 			id: userId,
+			staticSiteOnly: data.staticSiteOnly,
 			canCreateServices: data.canCreateServices,
 			canCreateProjects: data.canCreateProjects,
 			canDeleteServices: data.canDeleteServices,
@@ -329,6 +333,12 @@ export const AddUserPermissions = ({ userId, role }: Props) => {
 								and services they can access below.
 							</div>
 						)}
+                        {!isCustomRole && <FormField control={form.control} name="staticSiteOnly" render={({ field }) => (
+                            <FormItem className="md:col-span-2 flex flex-row items-center justify-between rounded-lg border p-3">
+                                <div><FormLabel>Yalnızca statik site yayınlama</FormLabel><FormDescription>Seçilen ortamlarda hazır ZIP yayınlar ve alan adı bağlar. Genel servis, veritabanı, Compose, terminal ve çalıştırma ayarları kapatılır.</FormDescription></div>
+                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                            </FormItem>
+                        )} />}
 						{!isCustomRole && (
 							<>
 								<FormField

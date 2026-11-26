@@ -81,6 +81,7 @@ export const applications = pgTable("application", {
 		.notNull()
 		.primaryKey()
 		.$defaultFn(() => nanoid()),
+	staticSiteOnly: boolean("staticSiteOnly").notNull().default(false),
 	name: text("name").notNull(),
 	appName: text("appName")
 		.notNull()
@@ -390,7 +391,7 @@ const createSchema = createInsertSchema(applications, {
 		.max(2 * 1024 * 1024, "Icon must be less than 2MB")
 		.nullable()
 		.optional(),
-});
+}).omit({ staticSiteOnly: true });
 
 export const apiCreateApplication = createSchema.pick({
 	name: true,

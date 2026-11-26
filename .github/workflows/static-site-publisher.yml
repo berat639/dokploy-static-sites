@@ -1,0 +1,31 @@
+name: Static site publisher verification
+on:
+  workflow_dispatch:
+  push:
+    branches: [static-site-publisher]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.22.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.4.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node --test tests/static-sites/policy.test.ts
+      - run: node --test tests/static-sites/run-scope-tests.mjs
+      - run: pnpm --filter=dokploy exec vitest run --config __test__/vitest.config.ts __test__/permissions __test__/wss/authorize.test.ts
+      - run: pnpm --filter=@dokploy/server build
+      - run: pnpm --filter=dokploy typecheck
+      - name: Prepare build defaults
+        run: |
+          cp apps/dokploy/.env.production.example .env.production
+          cp apps/dokploy/.env.production.example apps/dokploy/.env.production
+      - run: docker build --target dokploy -t dokploy-static-sites:verify .

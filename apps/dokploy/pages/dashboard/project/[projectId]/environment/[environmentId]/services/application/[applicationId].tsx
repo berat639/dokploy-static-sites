@@ -24,6 +24,7 @@ import { ShowVolumes } from "@/components/dashboard/application/advanced/volumes
 import { ShowDeployments } from "@/components/dashboard/application/deployments/show-deployments";
 import { ShowDomains } from "@/components/dashboard/application/domains/show-domains";
 import { ShowEnvironment } from "@/components/dashboard/application/environment/show";
+import { StaticSiteApplication } from "@/components/dashboard/application/static-site";
 import { ShowGeneralApplication } from "@/components/dashboard/application/general/show";
 import { ShowIconSettings } from "@/components/dashboard/application/icon/show-icon-settings";
 import { ShowDockerLogs } from "@/components/dashboard/application/logs/show";
@@ -109,6 +110,7 @@ const Service = (
 			href: `/dashboard/project/${projectId}/environment/${env.environmentId}`,
 		})) || [];
 
+	if (data?.staticSiteOnly) return <StaticSiteApplication applicationId={applicationId} />;
 	return (
 		<div className="pb-10">
 			<UseKeyboardNav forPage="application" />

@@ -474,12 +474,23 @@ export const userRouter = createTRPCRouter({
 				}
 
 				const { id, accessedGitProviders, accessedServers, ...rest } = input;
+                if (rest.staticSiteOnly) {
+                    if (ctx.user.role !== "owner" && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+                    const target = await db.query.member.findFirst({ where: and(eq(member.userId, id), eq(member.organizationId, ctx.session.activeOrganizationId)) });
+                    if (!target || target.role !== "member") throw new TRPCError({ code: "BAD_REQUEST", message: "Static-only mode requires a Member account" });
+                    Object.assign(rest, { canCreateProjects: false, canDeleteProjects: false, canCreateServices: false, canDeleteServices: false, canCreateEnvironments: false, canDeleteEnvironments: false, canAccessToDocker: false, canAccessToAPI: false, canAccessToSSHKeys: false, canAccessToGitProviders: false, canAccessToTraefikFiles: false });
+                }
 
+
+                const restrictedAccount = await db.query.user.findFirst({ where: eq(user.id, id), columns: { staticSiteOnly: true, staticSiteOrganizationId: true } });
+                if (restrictedAccount?.staticSiteOnly && restrictedAccount.staticSiteOrganizationId !== ctx.session.activeOrganizationId) throw new TRPCError({ code: "FORBIDDEN", message: "Static-only policy belongs to another organization" });
 				const licensed = await hasValidLicense(
 					ctx.session?.activeOrganizationId || "",
 				);
 
-				await db
+                await db.transaction(async tx => {
+                    await tx.update(user).set({ staticSiteOnly: rest.staticSiteOnly, staticSiteOrganizationId: rest.staticSiteOnly ? ctx.session.activeOrganizationId : null }).where(eq(user.id, id));
+				await tx
 					.update(member)
 					.set({
 						...rest,
@@ -499,6 +510,7 @@ export const userRouter = createTRPCRouter({
 							),
 						),
 					);
+                });
 				await audit(ctx, {
 					action: "update",
 					resourceType: "user",

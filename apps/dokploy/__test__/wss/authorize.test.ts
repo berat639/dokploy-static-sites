@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the permission + server helpers the wss authorizer composes.
+const mockAccount = vi.hoisted(() => vi.fn());
+vi.mock("@dokploy/server/db", () => ({ db: { query: { user: { findFirst: mockAccount } } } }));
+vi.mock("@dokploy/server/db/schema", () => ({ user: { id: "user-id" } }));
 const mockHasPermission = vi.hoisted(() => vi.fn());
 const mockFindMember = vi.hoisted(() => vi.fn());
 const mockCheckServiceAccess = vi.hoisted(() => vi.fn());
@@ -25,6 +28,7 @@ const SESSION = { activeOrganizationId: "org-1" };
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	mockAccount.mockResolvedValue({ staticSiteOnly: false });
 });
 
 describe("canAccessDockerOverWss", () => {
@@ -126,4 +130,20 @@ describe("canAccessTerminalOverWss", () => {
 		expect(await canAccessTerminalOverWss(USER, SESSION, "srv-2")).toBe(false);
 		expect(mockHasPermission).not.toHaveBeenCalled();
 	});
+});
+
+
+describe("static-only accounts", () => {
+ it("cannot open container terminals even with access to the service", async () => {
+  mockAccount.mockResolvedValue({ staticSiteOnly: true });
+  mockCheckServiceAccess.mockResolvedValue(undefined);
+  expect(await canAccessDockerOverWss(USER, SESSION, null, "svc-1")).toBe(false);
+  expect(mockCheckServiceAccess).not.toHaveBeenCalled();
+ });
+ it("cannot gain a server terminal through another organization", async () => {
+  mockAccount.mockResolvedValue({ staticSiteOnly: true });
+  mockFindMember.mockResolvedValue({ role: "owner" });
+  expect(await canAccessTerminalOverWss(USER, SESSION, "local")).toBe(false);
+  expect(await canAccessTerminalOverWss(USER, SESSION, "remote")).toBe(false);
+ });
 });

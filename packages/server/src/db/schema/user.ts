@@ -26,6 +26,8 @@ import { ssoProvider } from "./sso";
 
 // TEMP
 export const user = pgTable("user", {
+	staticSiteOnly: boolean("staticSiteOnly").notNull().default(false),
+	staticSiteOrganizationId: text("staticSiteOrganizationId"),
 	id: text("id")
 		.notNull()
 		.primaryKey()
@@ -93,6 +95,8 @@ const createSchema = createInsertSchema(user, {
 	id: z.string().min(1),
 	isRegistered: z.boolean().optional(),
 }).omit({
+	staticSiteOnly: true,
+	staticSiteOrganizationId: true,
 	role: true,
 	trustedOrigins: true,
 	bookmarkedTemplates: true,
@@ -140,6 +144,7 @@ export const apiAssignPermissions = createSchema
 		accessedGitProviders: z.array(z.string()).optional(),
 		accessedServers: z.array(z.string()).optional(),
 		canCreateProjects: z.boolean().optional(),
+		staticSiteOnly: z.boolean().optional().default(false),
 		canCreateServices: z.boolean().optional(),
 		canDeleteProjects: z.boolean().optional(),
 		canDeleteServices: z.boolean().optional(),

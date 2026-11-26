@@ -88,7 +88,8 @@ export const applicationRouter = createTRPCRouter({
 				const environment = await findEnvironmentById(input.environmentId);
 				const project = await findProjectById(environment.projectId);
 
-				await checkServiceAccess(ctx, project.projectId, "create");
+				const publisher = await findMemberByUserId(ctx.user.id, ctx.session.activeOrganizationId);
+				if (!publisher.staticSiteOnly) await checkServiceAccess(ctx, project.projectId, "create");
 
 				const webServerSettings = await getWebServerSettings();
 				if (
@@ -118,7 +119,7 @@ export const applicationRouter = createTRPCRouter({
 					}
 				}
 
-				const newApplication = await createApplication(input);
+				const newApplication = await createApplication(input, publisher.staticSiteOnly);
 
 				await addNewService(ctx, newApplication.applicationId);
 				await audit(ctx, {
@@ -930,6 +931,7 @@ export const applicationRouter = createTRPCRouter({
 				deployment: ["create"],
 			});
 			const app = await findApplicationById(applicationId);
+			if (app.staticSiteOnly && dropBuildPath) throw new TRPCError({ code: "FORBIDDEN", message: "Static ZIP root cannot be changed" });
 
 			await updateApplication(applicationId, {
 				sourceType: "drop",

@@ -29,6 +29,7 @@ import { type ReactElement, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import superjson from "superjson";
 import { AddAiAssistant } from "@/components/dashboard/project/add-ai-assistant";
+import { StaticSiteEnvironment } from "@/components/dashboard/application/static-site";
 import { AddApplication } from "@/components/dashboard/project/add-application";
 import { AddCompose } from "@/components/dashboard/project/add-compose";
 import { AddDatabase } from "@/components/dashboard/project/add-database";
@@ -1024,6 +1025,7 @@ const EnvironmentPage = (
 		);
 	}
 
+	if (auth?.staticSiteOnly) return <StaticSiteEnvironment environmentId={environmentId} projectId={projectId} />;
 	return (
 		<div>
 			<AdvanceBreadcrumb />

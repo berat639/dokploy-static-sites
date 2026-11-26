@@ -4,6 +4,7 @@ const mockMemberData = (
 	role: string,
 	overrides: Record<string, boolean> = {},
 ) => ({
+	staticSiteOnly: overrides.staticSiteOnly ?? false,
 	id: "member-1",
 	role,
 	userId: "user-1",
@@ -215,4 +216,17 @@ describe("legacy boolean overrides for member", () => {
 			checkPermission(ctx, { gitProviders: ["create"] }),
 		).rejects.toThrow();
 	});
+});
+
+
+describe("static-only membership overrides legacy grants", () => {
+ it("denies broad service creation even with the old boolean enabled", async () => {
+  memberToReturn = mockMemberData("member", { staticSiteOnly: true, canCreateServices: true, canAccessToDocker: true });
+  await expect(checkPermission(ctx, { service: ["create"] })).rejects.toThrow();
+  await expect(checkPermission(ctx, { docker: ["read"] })).rejects.toThrow();
+ });
+ it("allows static deployment and domain management permissions", async () => {
+  memberToReturn = mockMemberData("member", { staticSiteOnly: true });
+  await expect(checkPermission(ctx, { deployment: ["create"], domain: ["create"] })).resolves.toBeUndefined();
+ });
 });

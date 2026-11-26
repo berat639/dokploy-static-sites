@@ -13,6 +13,7 @@ import { hasValidLicense } from "@dokploy/server/index";
 import type { statements } from "@dokploy/server/lib/access-control";
 import { validateRequest } from "@dokploy/server/lib/auth";
 import { checkPermission } from "@dokploy/server/services/permission";
+import { enforceStaticSiteRequest } from "@dokploy/server/services/static-site";
 import type { OpenApiMeta } from "@dokploy/trpc-openapi";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateNextContextOptions } from "@trpc/server/adapters/next";
@@ -148,7 +149,11 @@ export const createTRPCRouter = t.router;
  * guarantee that a user querying is authorized, but you can still access user session data if they
  * are logged in.
  */
-export const publicProcedure = t.procedure;
+const guardedProcedure = t.procedure.use(async ({ ctx, next, path, type, getRawInput }) => {
+ if (ctx.user && ctx.session) await enforceStaticSiteRequest({ user: ctx.user, session: ctx.session }, path, type, await getRawInput());
+ return next();
+});
+export const publicProcedure = guardedProcedure;
 
 /**
  * Protected (authenticated) procedure
@@ -158,7 +163,7 @@ export const publicProcedure = t.procedure;
  *
  * @see https://trpc.io/docs/procedures
  */
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+export const protectedProcedure = guardedProcedure.use(async ({ ctx, next }) => {
 	if (!ctx.session || !ctx.user) {
 		throw new TRPCError({ code: "UNAUTHORIZED" });
 	}
@@ -172,7 +177,7 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
 	});
 });
 
-export const cliProcedure = t.procedure.use(({ ctx, next }) => {
+export const cliProcedure = guardedProcedure.use(({ ctx, next }) => {
 	if (
 		!ctx.session ||
 		!ctx.user ||
@@ -190,7 +195,7 @@ export const cliProcedure = t.procedure.use(({ ctx, next }) => {
 	});
 });
 
-export const adminProcedure = t.procedure.use(({ ctx, next }) => {
+export const adminProcedure = guardedProcedure.use(({ ctx, next }) => {
 	if (
 		!ctx.session ||
 		!ctx.user ||
@@ -213,7 +218,7 @@ export const adminProcedure = t.procedure.use(({ ctx, next }) => {
  * Does NOT call the license server on every request; full validation (haveValidLicenseKey)
  * is used in the UI gate and when activating/validating keys.
  */
-export const enterpriseProcedure = t.procedure.use(async ({ ctx, next }) => {
+export const enterpriseProcedure = guardedProcedure.use(async ({ ctx, next }) => {
 	if (
 		!ctx.session ||
 		!ctx.user ||

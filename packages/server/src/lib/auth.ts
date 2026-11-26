@@ -479,6 +479,10 @@ const createBetterAuth = () =>
 			twoFactor(),
 			passkey(),
 			organization({
+				allowUserToCreateOrganization: async (user) => {
+					const account = await db.query.user.findFirst({ where: eq(schema.user.id, user.id), columns: { staticSiteOnly: true } });
+					return !account?.staticSiteOnly;
+				},
 				ac,
 				roles: {
 					owner: ownerRole,
